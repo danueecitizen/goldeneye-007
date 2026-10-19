@@ -264,6 +264,60 @@
             }
         }
 
+        /* Clean MiddleDiv Fullscreen Mode */
+        #middleDiv:fullscreen, #middleDiv:-webkit-full-screen {
+            background: #000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 9999999 !important;
+        }
+
+        #middleDiv:fullscreen #canvas,
+        #middleDiv:-webkit-full-screen #canvas,
+        #middleDiv:fullscreen #netplay-video,
+        #middleDiv:-webkit-full-screen #netplay-video {
+            width: auto !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            aspect-ratio: 4/3 !important;
+            margin: 0 auto !important;
+            object-fit: contain !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .ge-exit-fs-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 9999999;
+            cursor: pointer;
+            display: none;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        #middleDiv:fullscreen .ge-exit-fs-btn,
+        #middleDiv:-webkit-full-screen .ge-exit-fs-btn {
+            display: block !important;
+        }
+
     </style>
 <script src="touch.js"></script>
 </head>
@@ -354,47 +408,9 @@
             </div>
 
 
-            <!-- AFTER LOAD -->
-            <div rv-hide="data.beforeEmulatorStarted">
-                <button class="btn btn-primary mt-2 mb-2" 
-                    onclick="myApp.newRom()" >New Rom</button>
-                <div class="btn-group mt-2 mb-2" rv-if="data.settings.SHOWADVANCED">
-                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Advanced
-                    </button>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item" onclick="myApp.exportEep()" style="cursor: pointer;">Export Save (EEP)</a>
-                        <a class="dropdown-item" onclick="myApp.exportSra()" style="cursor: pointer;">Export Save (SRA)</a>
-                        <a class="dropdown-item" onclick="myApp.exportFla()" style="cursor: pointer;">Export Save (FLA)</a>
-                    </div>
-                </div>
-                <div class="btn-group mt-2 mb-2" rv-if="data.settings.SHOWOPTIONS">
-                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Options
-                    </button>
-                    <div class="dropdown-menu">
-                        <a class="dropdown-item" onclick="myApp.reset()" style="cursor: pointer;">Reset</a>
-                    </div>
-                </div>
-                <span rv-if="data.showDoubleSpeed">
-                    <button class="btn btn-success mt-2 mb-2" rv-if="data.doubleSpeed | ev '==true'"
-                        onclick="myApp.toggleDoubleSpeed()">2x Speed</button>
-                    <button class="btn btn-primary mt-2 mb-2" rv-if="data.doubleSpeed | ev '==false'"
-                        onclick="myApp.toggleDoubleSpeed()">2x Speed</button>
-                </span>
-                <button rv-if="data.loggedIn | ev '==true'" class="btn btn-primary mt-2 mb-2" 
-                    onclick="myApp.saveCloud()" >Save Cloud</button>
-                <button rv-if="data.loggedIn | ev '==true'" class="btn btn-primary mt-2 mb-2" 
-                    onclick="myApp.loadCloud()"  rv-disabled="data.noCloudSave">Load Cloud</button>
-                <button rv-if="data.loggedIn | ev '==false'" class="btn btn-primary mt-2 mb-2" 
-                    onclick="myApp.saveStateLocal()" >Save State</button>
-                <button rv-if="data.loggedIn | ev '==false'" class="btn btn-primary mt-2 mb-2" 
-                    onclick="myApp.loadStateLocal()" rv-disabled="data.noLocalSave" >Load State</button>
-                <button class="btn btn-primary mt-2 mb-2" onclick="myApp.zoomOut()">Zoom Out</button>
-                <button class="btn btn-primary mt-2 mb-2" onclick="myApp.zoomIn()">Zoom In</button>
-                <button class="btn btn-primary mt-2 mb-2" onclick="myApp.fullscreen()" >Full Screen</button>
-
-
+            <!-- FULLSCREEN TOGGLE -->
+            <div class="my-2">
+                <button class="btn btn-primary font-weight-bold px-4 py-2" style="font-size:16px; background:#ff7a59; border:none; color:#09090b; border-radius:8px;" onclick="toggleGameFullscreen()">⛶ Full Screen</button>
             </div>
 
             <div rv-if="data.iosShowWarning" class="mt-4">
@@ -428,13 +444,15 @@
     </div>
 
     <div id="middleDiv" class="text-center">
+        <button class="ge-exit-fs-btn" onclick="toggleGameFullscreen()">✖ Exit Fullscreen</button>
         <!-- ID has to be canvas it's hardcoded in the EM generated .js -->
         <div id="canvasDiv" style="display: none;">
             <canvas id="canvas" style="width: 640px;"></canvas>
         </div>
+    </div>
 
-        <div id="soundHint" style="max-width:720px;margin:8px auto;padding:6px 10px;background:#fff3cd;
-border:1px solid #e0c060;border-radius:6px;font-size:14px">Sound starts after your first click or key press
+    <div id="soundHint" style="max-width:720px;margin:8px auto;padding:6px 10px;background:#fff3cd;
+border:1px solid #e0c060;border-radius:6px;font-size:14px;color:#000;">Sound starts after your first click or key press
 on this page (browsers block audio until then).</div>
         <!-- Controls Card & Table -->
         <div class="ge-controls-card">
@@ -521,8 +539,6 @@ on this page (browsers block audio until then).</div>
         <div id="bottomPanel" rv-hide="data.beforeEmulatorStarted">
             <!-- <div>{ data.audioSkipCount}</div> -->
         </div>
-        
-    </div>
 
     <!-- Mobile UX -->
     <div id="mobileButtons" style="display: none;text-align: center;padding-top: 20px;padding-bottom: 20px;">
@@ -1297,9 +1313,33 @@ on this page (browsers block audio until then).</div>
     <script src="settings.js?v=1"></script>
     <script src="romlist.js"></script>
     <script src="vendor/peerjs.min.js"></script>
-    <script src="touch_controls.js?v=4"></script>
-    <script src="netplay.js?v=7"></script>
+    <script src="touch_controls.js?v=5"></script>
+    <script src="netplay.js?v=8"></script>
     <script type="text/javascript">
+        function toggleGameFullscreen() {
+            const target = document.getElementById('middleDiv');
+            if (!target) return;
+            const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+            if (!isFs) {
+                const touchHud = document.getElementById('goldeneye-touch-hud');
+                if (touchHud && !target.contains(touchHud)) {
+                    target.appendChild(touchHud);
+                }
+                const req = target.requestFullscreen || target.webkitRequestFullscreen || target.webkitRequestFullScreen || target.mozRequestFullScreen || target.msRequestFullscreen;
+                if (req) {
+                    req.call(target).catch(err => {
+                        console.warn('[Fullscreen] Request failed:', err);
+                    });
+                }
+            } else {
+                const exit = document.exitFullscreen || document.webkitExitFullscreen || document.webkitCancelFullScreen || document.mozCancelFullScreen || document.msExitFullscreen;
+                if (exit) {
+                    exit.call(document).catch(err => {
+                        console.warn('[Fullscreen] Exit failed:', err);
+                    });
+                }
+            }
+        }
         window.addEventListener('DOMContentLoaded', () => {
             if (window.GoldenEyeTouch) window.GoldenEyeTouch.init();
             if (window.GoldenEyeNetplay) window.GoldenEyeNetplay.init();

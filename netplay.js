@@ -27,6 +27,35 @@ window.GoldenEyeNetplay = (function () {
         isStreaming: false
     };
 
+    // Safely capture native Gamepad API before any monkey-patching
+    const nativeGetGamepads = (function () {
+        if (typeof navigator !== 'undefined') {
+            if (Navigator.prototype && Navigator.prototype.getGamepads) {
+                return function () {
+                    try {
+                        return Navigator.prototype.getGamepads.call(navigator) || [];
+                    } catch (e) {
+                        return [];
+                    }
+                };
+            } else if (navigator.getGamepads) {
+                const fn = navigator.getGamepads.bind(navigator);
+                return function () {
+                    try {
+                        return fn() || [];
+                    } catch (e) {
+                        return [];
+                    }
+                };
+            }
+        }
+        return function () { return []; };
+    })();
+
+    function getNativeGamepads() {
+        return nativeGetGamepads();
+    }
+
     function generateRoomCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
@@ -121,32 +150,84 @@ window.GoldenEyeNetplay = (function () {
             }
         } catch (e) {}
 
-        // 3. Physical Gamepad API
+        // 3. Physical Gamepad API (USB / Bluetooth / Wireless / Mobile GameSir/Kishi)
         try {
-            const rawPads = (navigator.realGetGamepads ? navigator.realGetGamepads() : []) || [];
+            const rawPads = getNativeGamepads();
+            let physicalUsed = false;
             for (let i = 0; i < rawPads.length; i++) {
                 const gp = rawPads[i];
                 if (gp && gp.connected && gp.buttons && gp.buttons.length > 0) {
-                    if (gp.buttons[0] && gp.buttons[0].pressed) inp.a = true;
-                    if (gp.buttons[2] && gp.buttons[2].pressed) inp.b = true;
-                    if (gp.buttons[4] && gp.buttons[4].pressed) inp.z = true;
-                    if (gp.buttons[6] && gp.buttons[6].pressed) inp.z = true;
-                    if (gp.buttons[5] && gp.buttons[5].pressed) inp.r = true;
-                    if (gp.buttons[9] && gp.buttons[9].pressed) inp.start = true;
-                    if (gp.buttons[12] && gp.buttons[12].pressed) inp.dUp = true;
-                    if (gp.buttons[13] && gp.buttons[13].pressed) inp.dDown = true;
-                    if (gp.buttons[14] && gp.buttons[14].pressed) inp.dLeft = true;
-                    if (gp.buttons[15] && gp.buttons[15].pressed) inp.dRight = true;
+                    const btn = (idx) => {
+                        const b = gp.buttons[idx];
+                        if (!b) return false;
+                        return b.pressed || (typeof b.value === 'number' && b.value > 0.3);
+                    };
 
-                    if (Math.abs(gp.axes[0]) > 0.15) inp.stickX = gp.axes[0];
-                    if (Math.abs(gp.axes[1]) > 0.15) inp.stickY = gp.axes[1];
+                    let activeThisPad = false;
 
-                    if (gp.axes[2] < -0.4) inp.cLeft = true;
-                    if (gp.axes[2] > 0.4) inp.cRight = true;
-                    if (gp.axes[3] < -0.4) inp.cUp = true;
-                    if (gp.axes[3] > 0.4) inp.cDown = true;
-                    break;
+                    // Modern FPS mappings for Xbox / PlayStation / Switch / Mobile telescopic controllers:
+                    // Action / Open Doors / Reload / Activate (N64 B Button):
+                    // Button 0 = A (Xbox/Switch) or Cross (PS)
+                    // Button 2 = X (Xbox/Switch) or Square (PS)
+                    if (btn(0) || btn(2)) { inp.b = true; activeThisPad = true; }
+
+                    // Change Weapon (N64 A Button):
+                    // Button 1 = B (Xbox/Switch) or Circle (PS)
+                    // Button 3 = Y (Xbox/Switch) or Triangle (PS)
+                    if (btn(1) || btn(3)) { inp.a = true; activeThisPad = true; }
+
+                    // Fire Weapon (N64 Z Trigger):
+                    // RT (Button 7) or LB (Button 4)
+                    if (btn(7) || btn(4)) { inp.z = true; activeThisPad = true; }
+
+                    // Aim Crosshair (N64 R Shoulder Button):
+                    // LT (Button 6) or RB (Button 5)
+                    if (btn(6) || btn(5)) { inp.r = true; activeThisPad = true; }
+
+                    // Start / Dossier Menu:
+                    // Start (Button 9) or Select/Back (Button 8)
+                    if (btn(9) || btn(8)) { inp.start = true; activeThisPad = true; }
+
+                    // D-Pad
+                    if (btn(12)) { inp.dUp = true; activeThisPad = true; }
+                    if (btn(13)) { inp.dDown = true; activeThisPad = true; }
+                    if (btn(14)) { inp.dLeft = true; activeThisPad = true; }
+                    if (btn(15)) { inp.dRight = true; activeThisPad = true; }
+
+                    // Left Analog Stick (Movement) with 0.15 deadzone
+                    if (gp.axes && gp.axes.length >= 2) {
+                        const ax = gp.axes[0];
+                        const ay = gp.axes[1];
+                        if (Math.abs(ax) > 0.15) { inp.stickX = ax; activeThisPad = true; }
+                        if (Math.abs(ay) > 0.15) { inp.stickY = ay; activeThisPad = true; }
+                    }
+
+                    // Right Analog Stick (Look & Strafe C-Buttons)
+                    let rx = 0, ry = 0;
+                    if (gp.axes && gp.axes.length >= 4) {
+                        if (gp.axes.length >= 6 && Math.abs(gp.axes[2]) < 0.1 && (Math.abs(gp.axes[3]) > 0.2 || Math.abs(gp.axes[4]) > 0.2)) {
+                            rx = gp.axes[3];
+                            ry = gp.axes[4];
+                        } else {
+                            rx = gp.axes[2];
+                            ry = gp.axes[3];
+                        }
+                    }
+                    if (rx < -0.35) { inp.cLeft = true; activeThisPad = true; }
+                    if (rx > 0.35) { inp.cRight = true; activeThisPad = true; }
+                    if (ry < -0.35) { inp.cUp = true; activeThisPad = true; }
+                    if (ry > 0.35) { inp.cDown = true; activeThisPad = true; }
+
+                    if (activeThisPad) {
+                        physicalUsed = true;
+                        break; // Sample primary active gamepad
+                    }
                 }
+            }
+
+            // Auto-hide virtual touch controls if user is actively using physical gamepad
+            if (physicalUsed && window.GoldenEyeTouch && window.GoldenEyeTouch.isVisible && window.GoldenEyeTouch.isVisible()) {
+                window.GoldenEyeTouch.setVisible(false);
             }
         } catch (e) {}
 
@@ -225,7 +306,11 @@ window.GoldenEyeNetplay = (function () {
         }
 
         // On Host, supply 4 gamepads (Player 1 from Host, Player 2-4 from remote peers)
+        // On Guest, return real hardware controllers
         navigator.getGamepads = function () {
+            if (!STATE.isHost) {
+                return getNativeGamepads();
+            }
             return [
                 buildSyntheticGamepad(0, STATE.inputs[1]),
                 buildSyntheticGamepad(1, STATE.inputs[2]),
@@ -234,17 +319,35 @@ window.GoldenEyeNetplay = (function () {
             ];
         };
 
-        // Notify SDL that 4 controllers are active
-        setTimeout(() => {
+        function dispatchVirtualGamepads() {
+            if (!STATE.isHost) return;
             for (let i = 0; i < 4; i++) {
                 try {
-                    const pad = buildSyntheticGamepad(i, {});
-                    const ev = new Event('gamepadconnected');
-                    ev.gamepad = pad;
+                    const pad = buildSyntheticGamepad(i, STATE.inputs[i + 1] || {});
+                    let ev;
+                    try {
+                        ev = new GamepadEvent('gamepadconnected', { gamepad: pad });
+                    } catch (e) {
+                        ev = new Event('gamepadconnected');
+                        ev.gamepad = pad;
+                    }
                     window.dispatchEvent(ev);
                 } catch (e) {}
             }
-        }, 1500);
+        }
+
+        // Notify SDL2 that 4 controllers are active across boot & ROM loading
+        [500, 1500, 3000, 5000, 8000, 12000].forEach(delay => {
+            setTimeout(dispatchVirtualGamepads, delay);
+        });
+
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log('[Netplay] Gamepad connected:', e.gamepad && e.gamepad.id);
+            setTimeout(dispatchVirtualGamepads, 250);
+            if (window.GoldenEyeTouch && window.GoldenEyeTouch.isVisible && window.GoldenEyeTouch.isVisible()) {
+                window.GoldenEyeTouch.setVisible(false);
+            }
+        });
     }
 
     // Capture Host's Canvas & Audio into a 60 FPS WebRTC Stream
@@ -378,6 +481,11 @@ window.GoldenEyeNetplay = (function () {
         STATE.mySlot = 1;
         updateUI();
 
+        if (window.myClass && window.myClass.loadRom && window.myApp && window.myApp.rivetsData && window.myApp.rivetsData.beforeEmulatorStarted) {
+            console.log('[Netplay] Auto-starting game ROM for Host...');
+            window.myClass.loadRom();
+        }
+
         initHostStream();
 
         const fullPeerId = 'ge007-' + code.toLowerCase();
@@ -459,6 +567,11 @@ window.GoldenEyeNetplay = (function () {
         STATE.isHost = false;
         updateUI();
 
+        const topPanel = document.getElementById('topPanel');
+        if (topPanel) topPanel.style.display = 'none';
+        const canvasDiv = document.getElementById('canvasDiv');
+        if (canvasDiv) canvasDiv.style.display = 'block';
+
         STATE.peer = new Peer(null, { debug: 1 });
 
         STATE.peer.on('open', (myId) => {
@@ -509,6 +622,29 @@ window.GoldenEyeNetplay = (function () {
         }
     }
 
+    function kickSlot(slot) {
+        if (!STATE.isHost) return;
+        slot = parseInt(slot);
+        if (slot <= 1 || slot > 4) return;
+        console.log('[Netplay] Host kicking player in slot:', slot);
+        const conn = STATE.connections[slot];
+        if (conn) {
+            try {
+                conn.send({ type: 'KICKED' });
+                conn.close();
+            } catch (e) {}
+            delete STATE.connections[slot];
+        }
+        if (STATE.mediaCalls[slot]) {
+            try { STATE.mediaCalls[slot].close(); } catch (e) {}
+            delete STATE.mediaCalls[slot];
+        }
+        delete STATE.players[slot];
+        STATE.inputs[slot] = {};
+        broadcastPlayerList();
+        updateUI();
+    }
+
     function handleGuestMessage(data) {
         if (data.type === 'WELCOME') {
             STATE.mySlot = data.slot;
@@ -521,6 +657,9 @@ window.GoldenEyeNetplay = (function () {
         } else if (data.type === 'PONG') {
             STATE.currentPing = Math.round(performance.now() - data.time);
             updateUI();
+        } else if (data.type === 'KICKED') {
+            alert('You have been removed from the room by the host.');
+            window.location.reload();
         } else if (data.type === 'ROOM_FULL') {
             alert('Room is full (max 4 players).');
         }
@@ -565,15 +704,6 @@ window.GoldenEyeNetplay = (function () {
         if (el) el.style.display = 'none';
     }
 
-    function copyInviteLink() {
-        const url = window.location.origin + window.location.pathname + '#room=' + STATE.roomId;
-        navigator.clipboard.writeText(url).then(() => {
-            alert('Invite link copied to clipboard!\n\nSend this to your friends:\n' + url);
-        }).catch(() => {
-            prompt('Copy this invite link for your friends:', url);
-        });
-    }
-
     function updateUI() {
         const bar = document.getElementById('netplay-bar');
         if (!bar) return;
@@ -614,15 +744,18 @@ window.GoldenEyeNetplay = (function () {
                 const p = STATE.players[i];
                 if (p) {
                     const isMe = (i === STATE.mySlot);
+                    const kickBtn = (isHost && i > 1) 
+                        ? `<button class="btn btn-sm btn-danger py-0 px-2 ml-2" style="font-size:11px; font-weight:700; line-height:1.5; border-radius:4px; vertical-align:middle;" onclick="window.GoldenEyeNetplay.kickSlot(${i})">✖ Kick</button>`
+                        : '';
                     playerBadges += `
-                        <span class="badge badge-success p-2 mr-2 mb-1" style="font-size:13px; background:#22c55e;">
-                            ● Player ${i} ${isMe ? '(You)' : ''}
+                        <span class="badge badge-success p-2 mr-2 mb-1" style="font-size:13px; background:#22c55e; display:inline-flex; align-items:center;">
+                            ● Player ${i} ${isMe ? '(You)' : ''} ${kickBtn}
                         </span>
                     `;
                 } else {
                     playerBadges += `
                         <span class="badge badge-secondary p-2 mr-2 mb-1" style="font-size:13px; background:#444;">
-                            ○ Player ${i} (Waiting...)
+                            ○ Player ${i} (Open)
                         </span>
                     `;
                 }
@@ -633,8 +766,8 @@ window.GoldenEyeNetplay = (function () {
                     <div class="d-flex flex-wrap align-items-center justify-content-between">
                         <div class="text-left">
                             <div class="d-flex align-items-center gap-2">
-                                <span style="font-size:20px; font-weight:800; color:#ffb38a; letter-spacing:1px;">
-                                    ROOM: ${STATE.roomId}
+                                <span style="font-size:22px; font-weight:900; color:#ffb38a; letter-spacing:2px; font-family:monospace; user-select:all; cursor:pointer;" title="Tap to copy code" onclick="navigator.clipboard.writeText('${STATE.roomId}').then(()=>alert('Copied code: ${STATE.roomId}')).catch(()=>prompt('Room Code:', '${STATE.roomId}'))">
+                                    ROOM: ${STATE.roomId} <span style="font-size:12px; color:#aaa; font-weight:normal; letter-spacing:normal;">(tap to copy)</span>
                                 </span>
                                 <span class="badge badge-info ml-2" style="background:#ff7a59; color:#000;">
                                     ${isHost ? 'HOST' : 'GUEST (P' + STATE.mySlot + ')'}
@@ -649,15 +782,14 @@ window.GoldenEyeNetplay = (function () {
                             <button id="btnToggleTouch" class="btn btn-sm btn-outline-info mr-1">
                                 📱 Touch
                             </button>
-                            <button id="btnCopyInvite" class="btn btn-sm btn-outline-warning mr-1">
-                                📋 Copy Invite Link
+                            <button class="btn btn-sm btn-warning font-weight-bold" onclick="toggleGameFullscreen()" style="background:#ff7a59; border:none; color:#000;">
+                                ⛶ Full Screen
                             </button>
                         </div>
                     </div>
                 </div>
             `;
 
-            document.getElementById('btnCopyInvite').onclick = copyInviteLink;
             if (document.getElementById('btnToggleTouch')) {
                 document.getElementById('btnToggleTouch').onclick = () => window.GoldenEyeTouch && window.GoldenEyeTouch.toggle();
             }
@@ -693,6 +825,7 @@ window.GoldenEyeNetplay = (function () {
         init: init,
         createRoom: createRoom,
         joinRoom: joinRoom,
+        kickSlot: kickSlot,
         getState: () => STATE
     };
 })();

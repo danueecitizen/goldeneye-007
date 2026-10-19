@@ -202,7 +202,8 @@ window.GoldenEyeTouch = (function () {
             <!-- Audio Unmute Prompt -->
             <div id="ge-audio-banner">🔊 Tap to Unmute Game Audio</div>
         `;
-        document.body.appendChild(hud);
+        const hudParent = document.getElementById('middleDiv') || document.body;
+        hudParent.appendChild(hud);
 
         initButtons();
         initJoystick();
@@ -356,6 +357,7 @@ window.GoldenEyeTouch = (function () {
         init: init,
         toggle: toggle,
         setVisible: setVisible,
+        isVisible: () => STATE.enabled,
         getInput: () => STATE,
         unmuteAudio: unmuteAudio
     };
