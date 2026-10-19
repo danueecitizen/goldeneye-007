@@ -54,8 +54,8 @@ window.GoldenEyeTouch = (function () {
                 }
                 .ge-touch-zone {
                     position: absolute;
-                    bottom: 25px;
-                    left: 20px;
+                    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+                    left: calc(15px + env(safe-area-inset-left, 0px));
                     width: 150px;
                     height: 150px;
                     pointer-events: auto;
@@ -88,8 +88,8 @@ window.GoldenEyeTouch = (function () {
                 }
                 /* Fire (Z Trigger) - Primary Action */
                 #ge-btn-fire {
-                    bottom: 35px;
-                    right: 35px;
+                    bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+                    right: calc(30px + env(safe-area-inset-right, 0px));
                     width: 82px;
                     height: 82px;
                     background: rgba(220, 38, 38, 0.75);
@@ -99,8 +99,8 @@ window.GoldenEyeTouch = (function () {
                 }
                 /* Open Doors / Activate (B Button) */
                 #ge-btn-open {
-                    bottom: 128px;
-                    right: 35px;
+                    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+                    right: calc(30px + env(safe-area-inset-right, 0px));
                     width: 68px;
                     height: 68px;
                     background: rgba(37, 99, 235, 0.75);
@@ -110,8 +110,8 @@ window.GoldenEyeTouch = (function () {
                 }
                 /* Change Gun / Weapon (A Button) */
                 #ge-btn-gun {
-                    bottom: 45px;
-                    right: 128px;
+                    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+                    right: calc(120px + env(safe-area-inset-right, 0px));
                     width: 68px;
                     height: 68px;
                     background: rgba(217, 119, 6, 0.75);
@@ -121,8 +121,8 @@ window.GoldenEyeTouch = (function () {
                 }
                 /* Aim (R Shoulder) */
                 #ge-btn-aim {
-                    bottom: 125px;
-                    right: 115px;
+                    bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+                    right: calc(110px + env(safe-area-inset-right, 0px));
                     width: 58px;
                     height: 58px;
                     background: rgba(147, 51, 234, 0.75);
@@ -132,16 +132,16 @@ window.GoldenEyeTouch = (function () {
                 }
                 /* Strafe Left & Right */
                 #ge-btn-strafe-l {
-                    bottom: 185px;
-                    left: 25px;
+                    bottom: calc(175px + env(safe-area-inset-bottom, 0px));
+                    left: calc(20px + env(safe-area-inset-left, 0px));
                     width: 48px;
                     height: 48px;
                     background: rgba(55, 65, 81, 0.75);
                     font-size: 18px;
                 }
                 #ge-btn-strafe-r {
-                    bottom: 185px;
-                    left: 105px;
+                    bottom: calc(175px + env(safe-area-inset-bottom, 0px));
+                    left: calc(95px + env(safe-area-inset-left, 0px));
                     width: 48px;
                     height: 48px;
                     background: rgba(55, 65, 81, 0.75);
@@ -149,8 +149,8 @@ window.GoldenEyeTouch = (function () {
                 }
                 /* Start Button */
                 #ge-btn-start {
-                    top: 15px;
-                    right: 15px;
+                    top: calc(12px + env(safe-area-inset-top, 0px));
+                    right: calc(12px + env(safe-area-inset-right, 0px));
                     width: 70px;
                     height: 34px;
                     border-radius: 17px;
