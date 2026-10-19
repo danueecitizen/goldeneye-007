@@ -216,6 +216,54 @@
             text-decoration: underline;
         }
 
+        /* Modern Mobile Fullscreen Canvas & Dark Theme */
+        html, body {
+            background-color: #09090b !important;
+            color: #f4f4f5 !important;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        #mobileDiv, #mobileButtons, #mobileBottomPanel, #menuDiv, #startDiv, #divTouchSurface {
+            display: none !important;
+        }
+
+        #canvasDiv, #middleDiv {
+            width: 100%;
+            text-align: center;
+        }
+
+        #canvas, #netplay-video {
+            display: block;
+            margin: 0 auto;
+            max-width: 100vw;
+            max-height: 96vh;
+            aspect-ratio: 4/3;
+            background: #000;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+            border-radius: 6px;
+        }
+
+        @media (max-width: 850px) {
+            #maindiv h1 {
+                font-size: 18px;
+                margin-bottom: 4px;
+            }
+            #netplay-bar .card {
+                padding: 8px !important;
+                margin-top: 4px !important;
+                margin-bottom: 4px !important;
+            }
+            #canvas, #netplay-video {
+                height: 96vh !important;
+                max-height: 96vh !important;
+                width: auto !important;
+                max-width: 100vw !important;
+            }
+        }
+
     </style>
 <script src="touch.js"></script>
 </head>
@@ -1249,8 +1297,8 @@ on this page (browsers block audio until then).</div>
     <script src="settings.js?v=1"></script>
     <script src="romlist.js"></script>
     <script src="vendor/peerjs.min.js"></script>
-    <script src="touch_controls.js?v=3"></script>
-    <script src="netplay.js?v=6"></script>
+    <script src="touch_controls.js?v=4"></script>
+    <script src="netplay.js?v=7"></script>
     <script type="text/javascript">
         window.addEventListener('DOMContentLoaded', () => {
             if (window.GoldenEyeTouch) window.GoldenEyeTouch.init();

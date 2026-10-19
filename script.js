@@ -41,7 +41,7 @@ if (new URLSearchParams(location.search).get('audiolog')) {
     } catch (e) { console.log('audiolog n/a'); }
   }, 2000);
 }
-var AUDIOBUFFSIZE = 1024;
+var AUDIOBUFFSIZE = (window.innerWidth <= 850 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) ? 4096 : 2048;
 
 class MyClass {
     constructor() {
@@ -234,23 +234,16 @@ class MyClass {
         let isIpad = navigator.userAgent.toLocaleLowerCase().includes('ipad');
         if (isIphone || isIpad)
         {
-            this.iosMode = true;
+            this.iosMode = false; // Disable VBO pipeline stalling on mobile Safari
             try {
                 let iosVersion = navigator.userAgent.substring(navigator.userAgent.indexOf("iPhone OS ") + 10);
                 iosVersion = iosVersion.substring(0, iosVersion.indexOf(' '));
                 iosVersion = iosVersion.substring(0, iosVersion.indexOf('_'));
                 this.iosVersion = parseInt(iosVersion);
             } catch (err) { }
-
-            //don't need this anymore
-            // if (this.iosVersion > 15) {
-            //     this.rivetsData.iosShowWarning = true;
-            // }
         }
-        if (window.innerWidth < 600 || isIphone)
-            this.mobileMode = true;
-        else
-            this.mobileMode = false;
+        // Disable legacy n64wasm mobile layout (we use clean full-screen GoldenEyeTouch HUD)
+        this.mobileMode = false;
     }
 
     toggleDoubleSpeed(){
@@ -689,7 +682,11 @@ class MyClass {
     }
 
     resizeCanvas() {
-        $('#canvas').width(this.canvasSize);
+        if (window.innerWidth > 850) {
+            $('#canvas').css({ 'width': this.canvasSize + 'px', 'max-width': '100vw', 'height': 'auto', 'max-height': '92vh', 'aspect-ratio': '4/3', 'margin': '0 auto', 'display': 'block' });
+        } else {
+            $('#canvas').css({ 'width': 'auto', 'max-width': '100vw', 'height': '96vh', 'max-height': '96vh', 'aspect-ratio': '4/3', 'margin': '0 auto', 'display': 'block' });
+        }
     }
 
     zoomOut() {
